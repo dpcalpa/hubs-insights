@@ -63,6 +63,18 @@ class UnreachableHoleAnalysis:
         print('has_unreacheable_hole_error', has_unreacheable_hole_error)
 
         # -------------------
+
+        print('Count: ', len(raw_df.index))
+        has_unreachable_hole_warning_lst = raw_df['holes'].apply(
+            lambda x: [hole['length'] > hole['radius'] * RATIO_CONSTANT * POOR_RATIO for hole in json.loads(x)]
+        ).to_list()
+        raw_df["has_unreachable_hole_warning"] = has_unreachable_hole_warning_lst
+        has_unreacheable_hole_error_lst = raw_df['holes'].apply(
+            lambda x: [hole['length'] > hole['radius'] * RATIO_CONSTANT * CRITICAL_RATIO for hole in json.loads(x)]
+        ).to_list()
+        raw_df["has_unreacheable_hole_error"] = has_unreacheable_hole_error_lst
+
+        # -------------------
         # Testing todo remove
         length_lst = raw_df['holes'].apply(
             lambda x: [hole['length'] for hole in json.loads(x)]
@@ -73,7 +85,25 @@ class UnreachableHoleAnalysis:
         ).to_list()
         raw_df["radius"] = radius_lst
 
-        print(raw_df[['holes', 'length', 'radius']].iloc[:3])
+        has_unreachable_hole_warning_lst = raw_df['has_unreachable_hole_warning'].apply(
+            lambda x: any(x)
+        ).to_list()
+        raw_df["has_unreachable_hole_warning_f"] = has_unreachable_hole_warning_lst
+        has_unreacheable_hole_error_lst = raw_df['has_unreacheable_hole_error'].apply(
+            lambda x: any(x)
+        ).to_list()
+        raw_df["has_unreacheable_hole_error_f"] = has_unreacheable_hole_error_lst
+        print(raw_df[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
+            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']])
+
+        raw_df_1 = raw_df.query("has_unreachable_hole_warning_f == True")
+        print(raw_df_1[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
+            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']].iloc[:3])
+        print('Count: ', len(raw_df_1.index))
+        raw_df_2 = raw_df.query("has_unreacheable_hole_error_f == True")
+        print(raw_df_2[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
+            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']].iloc[:3])
+        print('Count: ', len(raw_df_2.index))
 
         # 3. Insights
 
