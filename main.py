@@ -11,7 +11,6 @@ RATIO_CONSTANT = 2
 
 class UnreachableHoleAnalysis:
     def __init__(self):
-        self.abc = 0
         self.file_path = ''
         self.file_name = '2023 DE_case_dataset.gz.parquet'
         self.partitions = ['', '']
@@ -30,10 +29,9 @@ class UnreachableHoleAnalysis:
 
         # 2. Create new columns
         print('Count: ', len(raw_df.index))
-
-        # todo remove filtering
         raw_df = raw_df.query("holes == holes")
         print('Count: ', len(raw_df.index))
+
         # -------------------
         # Print one record todo remove
         one_row_df = raw_df.iloc[0]
@@ -44,7 +42,7 @@ class UnreachableHoleAnalysis:
         holes_dict = json.loads(holes_str)
         print(holes_dict)
         for idx, i in enumerate(holes_dict):
-            print(f'Item {idx+1} of {len(holes_dict)}')
+            print(f'Item {idx + 1} of {len(holes_dict)}')
             for k, v in i.items():
                 print(f'    {k}: {v}')
         # has_unreachable_hole_warning
@@ -63,7 +61,20 @@ class UnreachableHoleAnalysis:
         print(bool_lst)
         has_unreacheable_hole_error = any(bool_lst)
         print('has_unreacheable_hole_error', has_unreacheable_hole_error)
+
         # -------------------
+        # Testing todo remove
+        length_lst = raw_df['holes'].apply(
+            lambda x: [hole['length'] for hole in json.loads(x)]
+        ).to_list()
+        raw_df["length"] = length_lst
+        radius_lst = raw_df['holes'].apply(
+            lambda x: [hole['radius'] for hole in json.loads(x)]
+        ).to_list()
+        raw_df["radius"] = radius_lst
+
+        print(raw_df[['holes', 'length', 'radius']].iloc[:3])
+
         # 3. Insights
 
         # 4. Write to parquet with partitions
