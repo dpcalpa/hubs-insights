@@ -1,5 +1,7 @@
 # imports
 import doctest
+import json
+
 import pandas as pd
 
 POOR_RATIO = 10
@@ -27,7 +29,41 @@ class UnreachableHoleAnalysis:
         raw_df = self.read_parquet()
 
         # 2. Create new columns
+        print('Count: ', len(raw_df.index))
 
+        # todo remove filtering
+        raw_df = raw_df.query("holes == holes")
+        print('Count: ', len(raw_df.index))
+        # -------------------
+        # Print one record todo remove
+        one_row_df = raw_df.iloc[0]
+        one_row_dict = one_row_df.to_dict()
+        print(one_row_dict)
+        print(one_row_dict['holes'])
+        holes_str = one_row_dict['holes']
+        holes_dict = json.loads(holes_str)
+        print(holes_dict)
+        for idx, i in enumerate(holes_dict):
+            print(f'Item {idx+1} of {len(holes_dict)}')
+            for k, v in i.items():
+                print(f'    {k}: {v}')
+        # has_unreachable_hole_warning
+        bool_lst = [True
+                    if h['length'] > h['radius'] * RATIO_CONSTANT * POOR_RATIO
+                    else False
+                    for h in holes_dict]
+        print(bool_lst)
+        has_unreachable_hole_warning = any(bool_lst)
+        print('has_unreachable_hole_warning', has_unreachable_hole_warning)
+        # has_unreacheable_hole_error
+        bool_lst = [True
+                    if h['length'] > h['radius'] * RATIO_CONSTANT * CRITICAL_RATIO
+                    else False
+                    for h in holes_dict]
+        print(bool_lst)
+        has_unreacheable_hole_error = any(bool_lst)
+        print('has_unreacheable_hole_error', has_unreacheable_hole_error)
+        # -------------------
         # 3. Insights
 
         # 4. Write to parquet with partitions
