@@ -27,24 +27,23 @@ class UnreachableHoleAnalysis:
         # 1. Read from parquet to pandas dataframe
         raw_df = self.read_parquet()
 
-        # 2. Create new columns
-        print('Count: ', len(raw_df.index))
-        raw_df = raw_df.query("holes == holes")
-        print('Count: ', len(raw_df.index))
-
-        # -------------------
-        # Print one record todo remove
-        one_row_df = raw_df.iloc[0]
+        # 2. Data exploration: one record
+        # Printing holes data sample
+        one_row_df = raw_df.query("holes == holes").iloc[0]
         one_row_dict = one_row_df.to_dict()
-        print(one_row_dict)
-        print(one_row_dict['holes'])
+        for k, v in one_row_dict.items():
+            print("- ", k, type(v))
+            vn = json.loads(v) if '{' in str(v) else v
+            print(f"    {vn}")
+
         holes_str = one_row_dict['holes']
         holes_dict = json.loads(holes_str)
-        print(holes_dict)
         for idx, i in enumerate(holes_dict):
             print(f'Item {idx + 1} of {len(holes_dict)}')
             for k, v in i.items():
                 print(f'    {k}: {v}')
+
+        # Creating columns for data sample
         # has_unreachable_hole_warning
         bool_lst = [True
                     if h['length'] > h['radius'] * RATIO_CONSTANT * POOR_RATIO
@@ -53,6 +52,7 @@ class UnreachableHoleAnalysis:
         print(bool_lst)
         has_unreachable_hole_warning = any(bool_lst)
         print('has_unreachable_hole_warning', has_unreachable_hole_warning)
+
         # has_unreacheable_hole_error
         bool_lst = [True
                     if h['length'] > h['radius'] * RATIO_CONSTANT * CRITICAL_RATIO
@@ -62,52 +62,29 @@ class UnreachableHoleAnalysis:
         has_unreacheable_hole_error = any(bool_lst)
         print('has_unreacheable_hole_error', has_unreacheable_hole_error)
 
-        # -------------------
-
-        print('Count: ', len(raw_df.index))
+        # 3. Create new columns
         has_unreachable_hole_warning_lst = raw_df['holes'].apply(
-            lambda x: [hole['length'] > hole['radius'] * RATIO_CONSTANT * POOR_RATIO for hole in json.loads(x)]
-        ).to_list()
-        raw_df["has_unreachable_hole_warning"] = has_unreachable_hole_warning_lst
+            lambda x: any([hole['length'] > hole['radius'] * RATIO_CONSTANT * POOR_RATIO if hole
+                           else False
+                           for hole in json.loads(str(x or '{}'))])
+            ).to_list()
         has_unreacheable_hole_error_lst = raw_df['holes'].apply(
-            lambda x: [hole['length'] > hole['radius'] * RATIO_CONSTANT * CRITICAL_RATIO for hole in json.loads(x)]
-        ).to_list()
+            lambda x: any([hole['length'] > hole['radius'] * RATIO_CONSTANT * CRITICAL_RATIO if hole
+                           else False
+                           for hole in json.loads(str(x or '{}'))])
+            ).to_list()
+        raw_df["has_unreachable_hole_warning"] = has_unreachable_hole_warning_lst
         raw_df["has_unreacheable_hole_error"] = has_unreacheable_hole_error_lst
+        print(raw_df[['has_unreachable_hole_warning', 'has_unreacheable_hole_error']].iloc[:3])
 
-        # -------------------
-        # Testing todo remove
-        length_lst = raw_df['holes'].apply(
-            lambda x: [hole['length'] for hole in json.loads(x)]
-        ).to_list()
-        raw_df["length"] = length_lst
-        radius_lst = raw_df['holes'].apply(
-            lambda x: [hole['radius'] for hole in json.loads(x)]
-        ).to_list()
-        raw_df["radius"] = radius_lst
+        # 4. Some insights
+        print('Count full df: ', len(raw_df.index))
+        print('Count parts with holes: ', len(raw_df.query("holes == holes").index))
+        print('Count parts with hole warnings: ', len(raw_df.query("has_unreachable_hole_warning == True").index))
+        print('Count parts with hole errors: ', len(raw_df.query("has_unreacheable_hole_error == True").index))
 
-        has_unreachable_hole_warning_lst = raw_df['has_unreachable_hole_warning'].apply(
-            lambda x: any(x)
-        ).to_list()
-        raw_df["has_unreachable_hole_warning_f"] = has_unreachable_hole_warning_lst
-        has_unreacheable_hole_error_lst = raw_df['has_unreacheable_hole_error'].apply(
-            lambda x: any(x)
-        ).to_list()
-        raw_df["has_unreacheable_hole_error_f"] = has_unreacheable_hole_error_lst
-        print(raw_df[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
-            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']])
 
-        raw_df_1 = raw_df.query("has_unreachable_hole_warning_f == True")
-        print(raw_df_1[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
-            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']].iloc[:3])
-        print('Count: ', len(raw_df_1.index))
-        raw_df_2 = raw_df.query("has_unreacheable_hole_error_f == True")
-        print(raw_df_2[['holes', 'length', 'radius', 'has_unreachable_hole_warning', 'has_unreachable_hole_warning_f'
-            , 'has_unreacheable_hole_error', 'has_unreacheable_hole_error_f']].iloc[:3])
-        print('Count: ', len(raw_df_2.index))
-
-        # 3. Insights
-
-        # 4. Write to parquet with partitions
+        # 5. Write to parquet with partitions
 
         # print(res.columns)
 
