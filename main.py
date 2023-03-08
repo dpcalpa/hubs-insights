@@ -1,8 +1,9 @@
 # imports
 import doctest
 import json
-
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 POOR_RATIO = 10
 CRITICAL_RATIO = 40
@@ -75,27 +76,25 @@ class UnreachableHoleAnalysis:
             ).to_list()
         raw_df["has_unreachable_hole_warning"] = has_unreachable_hole_warning_lst
         raw_df["has_unreacheable_hole_error"] = has_unreacheable_hole_error_lst
-        print(raw_df[['has_unreachable_hole_warning', 'has_unreacheable_hole_error']].iloc[:3])
+
+        self.output_df = raw_df
+        print(self.output_df[['has_unreachable_hole_warning', 'has_unreacheable_hole_error']].iloc[:3])
 
         # 4. Some insights
-        print('Count full df: ', len(raw_df.index))
-        print('Count parts with holes: ', len(raw_df.query("holes == holes").index))
-        print('Count parts with hole warnings: ', len(raw_df.query("has_unreachable_hole_warning == True").index))
-        print('Count parts with hole errors: ', len(raw_df.query("has_unreacheable_hole_error == True").index))
-
+        print('Count full df: ', len(self.output_df.index))
+        print('Count parts with holes: ', len(self.output_df.query("holes == holes").index))
+        print('Count parts with hole warnings: ', len(self.output_df.query("has_unreachable_hole_warning == True").index))
+        print('Count parts with hole errors: ', len(self.output_df.query("has_unreacheable_hole_error == True").index))
 
         # 5. Write to parquet with partitions
-
-        # print(res.columns)
+        self.write_parquet()
 
     def read_parquet(self):
         """Reads from parquet file format
         Args
             arg1 (int): first argument
-
         Returns:
             Sum of num1 and num2
-        #>>> uha.read_parquet() is not None
         """
         path = self.file_path
         file_name = self.file_name
@@ -103,8 +102,18 @@ class UnreachableHoleAnalysis:
         return df
 
     def write_parquet(self):
-        """"""
-        path = self.file_path
+        """Writes dataframe to parquet file format
+        Args
+            arg1 (int): first argument
+        Returns:
+            Sum of num1 and num2
+        """
+        table = pa.Table.from_pandas(self.output_df)
+        pq.write_to_dataset(
+            table,
+            root_path='output',
+            partition_cols=['status'],
+        )
 
 
 if __name__ == '__main__':
